@@ -233,7 +233,7 @@ export class OAuthService {
             var response_type = "token";
 
             if (that.oidc) {
-                response_type = "openid id_token " + response_type;
+                response_type = "id_token " + response_type;
             }
 
             if (that.hybrid) {
