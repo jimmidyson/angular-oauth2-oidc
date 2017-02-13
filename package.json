@@ -1,6 +1,6 @@
 {
   "name": "angular-oauth2-oidc-hybrid",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "scripts": {
     "lint": "tslint src/**/*.ts",
     "test": "tsc && karma start",
