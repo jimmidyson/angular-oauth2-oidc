@@ -235,8 +235,15 @@ export class OAuthService {
                 response_type = 'code ' + response_type;
             }
 
-            let url = this.loginUrl
-                + '?response_type='
+
+            let url = this.loginUrl;
+
+            if (/\?/.test(url)) {
+                url += '&';
+            } else {
+                url += '?';
+            }
+            url += 'response_type='
                 + response_type
                 + '&client_id='
                 + encodeURIComponent(this.clientId)
