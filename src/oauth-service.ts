@@ -92,7 +92,7 @@ export class OAuthService {
 
         return new Promise((resolve, reject) => {
 
-            let headers = new Headers();
+            const headers = new Headers();
             headers.set('Authorization', 'Bearer ' + this.getAccessToken());
 
             this.http.get(this.userinfoEndpoint, { headers }).map(r => r.json()).subscribe(
@@ -113,7 +113,7 @@ export class OAuthService {
     fetchTokenUsingPasswordFlow(userName: string, password: string) {
 
         return new Promise((resolve, reject) => {
-            let search = new URLSearchParams();
+            const search = new URLSearchParams();
             search.set('grant_type', 'password');
             search.set('client_id', this.clientId);
             search.set('scope', this.scope);
@@ -124,10 +124,10 @@ export class OAuthService {
                 search.set('client_secret', this.dummyClientSecret);
             }
 
-            let headers = new Headers();
+            const headers = new Headers();
             headers.set('Content-Type', 'application/x-www-form-urlencoded');
 
-            let params = search.toString();
+            const params = search.toString();
 
             this.http.post(this.tokenEndpoint, params, { headers }).map(r => r.json()).subscribe(
                 (tokenResponse) => {
@@ -147,7 +147,7 @@ export class OAuthService {
     fetchTokenUsingCode(code: string) {
 
         return new Promise((resolve, reject) => {
-            let search = new URLSearchParams();
+            const search = new URLSearchParams();
             search.set('grant_type', 'authorization_code');
             search.set('client_id', this.clientId);
             search.set('redirect_uri', this.redirectUri);
@@ -157,10 +157,10 @@ export class OAuthService {
                 search.set('client_secret', this.dummyClientSecret);
             }
 
-            let headers = new Headers();
+            const headers = new Headers();
             headers.set('Content-Type', 'application/x-www-form-urlencoded');
 
-            let params = search.toString();
+            const params = search.toString();
 
             this.http.post(this.tokenEndpoint, params, { headers }).map(r => r.json()).subscribe(
                 (tokenResponse) => {
@@ -183,7 +183,7 @@ export class OAuthService {
         const refreshToken = this._storage.getItem('refresh_token');
         if (refreshToken) {
             return new Promise((resolve, reject) => {
-                let search = new URLSearchParams();
+                const search = new URLSearchParams();
                 search.set('grant_type', 'refresh_token');
                 search.set('client_id', this.clientId);
                 search.set('scope', this.scope);
@@ -193,10 +193,10 @@ export class OAuthService {
                     search.set('client_secret', this.dummyClientSecret);
                 }
 
-                let headers = new Headers();
+                const headers = new Headers();
                 headers.set('Content-Type', 'application/x-www-form-urlencoded');
 
-                let params = search.toString();
+                const params = search.toString();
 
                 this.http.post(this.tokenEndpoint, params, { headers }).map(r => r.json()).subscribe(
                     (tokenResponse) => {
@@ -312,10 +312,11 @@ export class OAuthService {
             id_token: string;
             state: string;
             code: string;
+            expires_in: number;
         };
 
         const parts = this.getFragment() as QueryStringParts;
-        const {access_token, id_token, state, code} = parts;
+        const {access_token, id_token, state, code, expires_in} = parts;
 
         let oidcSuccess = false;
         let oauthSuccess = false;
@@ -333,7 +334,7 @@ export class OAuthService {
         const nonceInState = stateParts[0];
         if (savedNonce === nonceInState) {
 
-            this.storeAccessTokenResponse(access_token, null, parts['expires_in']);
+            this.storeAccessTokenResponse(access_token, null, expires_in);
 
             if (stateParts.length > 1) {
                 this.state = stateParts[1];
