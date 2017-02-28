@@ -1,28 +1,28 @@
-import {Base64} from 'js-base64';
-import {fromByteArray} from 'base64-js';
+import { Base64 } from 'js-base64';
+import { fromByteArray } from 'base64-js';
 import * as _sha256 from 'sha256';
 import { Http, URLSearchParams, Headers } from '@angular/http';
 import { Injectable } from '@angular/core';
 import { Observable, Observer } from 'rxjs';
 
-var sha256: any = _sha256;
+const sha256: any = _sha256;
 
 @Injectable()
 export class OAuthService {
 
-    public clientId = "";
-    public redirectUri = "";
-    public loginUrl = "";
-    public scope = "";
-    public resource = "";
-    public rngUrl = "";
+    public clientId = '';
+    public redirectUri = '';
+    public loginUrl = '';
+    public scope = '';
+    public resource = '';
+    public rngUrl = '';
     public oidc = false;
     public hybrid = false;
     public options: any;
-    public state = "";
-    public issuer = "";
+    public state = '';
+    public issuer = '';
     public validationHandler: any;
-    public logoutUrl = "";
+    public logoutUrl = '';
     public clearHashAfterLogin: boolean = true;
     public tokenEndpoint: string;
     public userinfoEndpoint: string;
@@ -35,11 +35,11 @@ export class OAuthService {
 
     private grantTypesSupported: Array<string> = [];
 
+    private _storage: Storage = localStorage;
+
     public setStorage(storage: Storage) {
         this._storage = storage;
     }
-
-    private _storage: Storage = localStorage;
 
     constructor(private http: Http) {
         this.discoveryDocumentLoaded$ = Observable.create(sender => {
@@ -81,12 +81,14 @@ export class OAuthService {
 
     fetchTokenUsingPasswordFlowAndLoadUserProfile(userName: string, password: string) {
         return this
-                .fetchTokenUsingPasswordFlow(userName, password)
-                .then(() => this.loadUserProfile());
+            .fetchTokenUsingPasswordFlow(userName, password)
+            .then(() => this.loadUserProfile());
     }
 
     loadUserProfile() {
-        if (!this.hasValidAccessToken()) throw Error("Can not load User Profile without access_token");
+        if (!this.hasValidAccessToken()) {
+            throw Error('Can not load User Profile without access_token');
+        }
 
         return new Promise((resolve, reject) => {
 
@@ -95,7 +97,6 @@ export class OAuthService {
 
             this.http.get(this.userinfoEndpoint, { headers }).map(r => r.json()).subscribe(
                 (doc) => {
-                    console.debug('userinfo received', doc);
                     this._storage.setItem('id_token_claims_obj', JSON.stringify(doc));
                     resolve(doc);
                 },
@@ -130,7 +131,6 @@ export class OAuthService {
 
             this.http.post(this.tokenEndpoint, params, { headers }).map(r => r.json()).subscribe(
                 (tokenResponse) => {
-                    console.debug('tokenResponse', tokenResponse);
                     this.storeAccessTokenResponse(tokenResponse.access_token, tokenResponse.refresh_token, tokenResponse.expires_in);
 
                     resolve(tokenResponse);
@@ -164,7 +164,6 @@ export class OAuthService {
 
             this.http.post(this.tokenEndpoint, params, { headers }).map(r => r.json()).subscribe(
                 (tokenResponse) => {
-                    console.debug('tokenResponse', tokenResponse);
                     this.storeAccessTokenResponse(tokenResponse.access_token, tokenResponse.refresh_token, tokenResponse.expires_in);
 
                     resolve(tokenResponse);
@@ -201,7 +200,6 @@ export class OAuthService {
 
                 this.http.post(this.tokenEndpoint, params, { headers }).map(r => r.json()).subscribe(
                     (tokenResponse) => {
-                        console.debug('refresh tokenResponse', tokenResponse);
                         this.storeAccessTokenResponse(tokenResponse.access_token, tokenResponse.refresh_token, tokenResponse.expires_in);
                         resolve(tokenResponse);
                     },
@@ -217,116 +215,118 @@ export class OAuthService {
 
 
     createLoginUrl(state) {
-        var that = this;
+        if (typeof state === 'undefined') { state = ''; }
 
-        if (typeof state === "undefined") { state = ""; }
-
-        return this.createAndSaveNonce().then(function (nonce: any) {
+        return this.createAndSaveNonce().then((nonce: any) => {
 
             if (state) {
-                state = nonce + ";" + state;
-            }
-            else {
+                state = nonce + ';' + state;
+            } else {
                 state = nonce;
             }
 
-            var response_type = "token";
+            let response_type = 'token';
 
-            if (that.oidc) {
-                response_type = "id_token " + response_type;
+            if (this.oidc) {
+                response_type = 'id_token ' + response_type;
             }
 
-            if (that.hybrid) {
-                response_type = "code " + response_type;
+            if (this.hybrid) {
+                response_type = 'code ' + response_type;
             }
 
-            var url = that.loginUrl
-                        + "?response_type="
-                        + response_type
-                        + "&client_id="
-                        + encodeURIComponent(that.clientId)
-                        + "&state="
-                        + encodeURIComponent(state)
-                        + "&redirect_uri="
-                        + encodeURIComponent(that.redirectUri)
-                        + "&scope="
-                        + encodeURIComponent(that.scope);
+            let url = this.loginUrl
+                + '?response_type='
+                + response_type
+                + '&client_id='
+                + encodeURIComponent(this.clientId)
+                + '&state='
+                + encodeURIComponent(state)
+                + '&redirect_uri='
+                + encodeURIComponent(this.redirectUri)
+                + '&scope='
+                + encodeURIComponent(this.scope);
 
-            if (that.resource) {
-                url += "&resource=" + encodeURIComponent(that.resource);
+            if (this.resource) {
+                url += '&resource=' + encodeURIComponent(this.resource);
             }
 
-            if (that.oidc) {
-                url += "&nonce=" + encodeURIComponent(nonce);
+            if (this.oidc) {
+                url += '&nonce=' + encodeURIComponent(nonce);
             }
 
             return url;
         });
     };
 
-    initImplicitFlow(additionalState = "") {
+    initImplicitFlow(additionalState = '') {
         this.createLoginUrl(additionalState).then(function (url) {
             location.href = url;
         })
-        .catch(function (error) {
-            console.error("Error in initImplicitFlow");
-            console.error(error);
-        });
+            .catch(function (error) {
+                console.error('Error in initImplicitFlow');
+                console.error(error);
+            });
     };
 
     callEventIfExists(options: any) {
-        var that = this;
         if (options.onTokenReceived) {
-            var tokenParams = {
-                idClaims: that.getIdentityClaims(),
-                idToken: that.getIdToken(),
-                accessToken: that.getAccessToken(),
-                state: that.state
+            const tokenParams = {
+                idClaims: this.getIdentityClaims(),
+                idToken: this.getIdToken(),
+                accessToken: this.getAccessToken(),
+                state: this.state
             };
             options.onTokenReceived(tokenParams);
         }
     }
 
     private storeAccessTokenResponse(accessToken: string, refreshToken: string, expiresIn: number) {
-        this._storage.setItem("access_token", accessToken);
+        this._storage.setItem('access_token', accessToken);
 
         if (expiresIn) {
-            var expiresInMilliSeconds = expiresIn * 1000;
-            var now = new Date();
-            var expiresAt = now.getTime() + expiresInMilliSeconds;
-            this._storage.setItem("expires_at", "" + expiresAt);
+            const expiresInMilliSeconds = expiresIn * 1000;
+            const now = new Date();
+            const expiresAt = now.getTime() + expiresInMilliSeconds;
+            this._storage.setItem('expires_at', '' + expiresAt);
         }
 
         if (refreshToken) {
-            this._storage.setItem("refresh_token", refreshToken);
+            this._storage.setItem('refresh_token', refreshToken);
         }
     }
 
     tryLogin(options) {
 
-        options = options || { };
+        options = options || {};
 
+        interface QueryStringParts {
+            access_token: string;
+            id_token: string;
+            state: string;
+            code: string;
+        };
 
-        var parts = this.getFragment();
+        const parts = this.getFragment() as QueryStringParts;
+        const {access_token, id_token, state, code} = parts;
 
-        var accessToken = parts["access_token"];
-        var idToken = parts["id_token"];
-        var state = parts["state"];
-        var code = parts["code"];
+        let oidcSuccess = false;
+        let oauthSuccess = false;
 
-        var oidcSuccess = false;
-        var oauthSuccess = false;
+        if (!access_token || !state) {
+            return false;
+        }
+        if (this.oidc && !id_token) {
+            return false;
+        }
 
-        if (!accessToken || !state) return false;
-        if (this.oidc && !idToken) return false;
+        const savedNonce = this._storage.getItem('nonce');
 
-        var savedNonce = this._storage.getItem("nonce");
-
-        var stateParts = state.split(';');
-        var nonceInState = stateParts[0];
+        const stateParts = state.split(';');
+        const nonceInState = stateParts[0];
         if (savedNonce === nonceInState) {
 
-            this.storeAccessTokenResponse(accessToken, null, parts['expires_in']);
+            this.storeAccessTokenResponse(access_token, null, parts['expires_in']);
 
             if (stateParts.length > 1) {
                 this.state = stateParts[1];
@@ -336,11 +336,15 @@ export class OAuthService {
 
         }
 
-        if (!oauthSuccess) return false;
+        if (!oauthSuccess) {
+            return false;
+        }
 
         if (this.oidc) {
-            oidcSuccess = this.processIdToken(idToken, accessToken, code);
-            if (!oidcSuccess) return false;
+            oidcSuccess = this.processIdToken(id_token, access_token, code);
+            if (!oidcSuccess) {
+                return false;
+            }
         }
 
         if (this.hybrid && code) {
@@ -349,19 +353,18 @@ export class OAuthService {
 
         if (options.validationHandler) {
 
-            var validationParams = {accessToken: accessToken, idToken: idToken};
+            const validationParams = { accessToken: access_token, idToken: id_token };
 
             options
                 .validationHandler(validationParams)
                 .then(() => {
                     this.callEventIfExists(options);
                 })
-                .catch(function(reason) {
+                .catch(function (reason) {
                     console.error('Error validating tokens');
                     console.error(reason);
-                })
-        }
-        else {
+                });
+        } else {
             this.callEventIfExists(options);
         }
 
@@ -373,114 +376,118 @@ export class OAuthService {
         }
         */
 
-        if (this.clearHashAfterLogin) location.hash = '';
+        if (this.clearHashAfterLogin) {
+            location.hash = '';
+        }
 
         return true;
     };
 
     processIdToken(idToken, accessToken, code) {
-            var tokenParts = idToken.split(".");
-            var claimsBase64 = this.padBase64(tokenParts[1]);
-            var claimsJson = Base64.decode(claimsBase64);
-            var claims = JSON.parse(claimsJson);
-            var savedNonce = this._storage.getItem("nonce");
+        const tokenParts = idToken.split('.');
+        const claimsBase64 = this.padBase64(tokenParts[1]);
+        const claimsJson = Base64.decode(claimsBase64);
+        const claims = JSON.parse(claimsJson);
+        const savedNonce = this._storage.getItem('nonce');
 
-            if (Array.isArray(claims.aud)) {
-                if (claims.aud.every(v => v !== this.clientId)) {
-                    console.warn("Wrong audience: " + claims.aud.join(","));
-                    return false;
-                }
-            } else {
-                if (claims.aud !== this.clientId) {
-                    console.warn("Wrong audience: " + claims.aud);
-                    return false;
-                }
-            }
-
-            if (this.issuer && claims.iss !== this.issuer) {
-                console.warn("Wrong issuer: " + claims.iss);
+        if (Array.isArray(claims.aud)) {
+            if (claims.aud.every(v => v !== this.clientId)) {
+                console.warn('Wrong audience: ' + claims.aud.join(','));
                 return false;
             }
-
-            if (claims.nonce !== savedNonce) {
-                console.warn("Wrong nonce: " + claims.nonce);
+        } else {
+            if (claims.aud !== this.clientId) {
+                console.warn('Wrong audience: ' + claims.aud);
                 return false;
             }
+        }
 
-            if (accessToken && !this.checkAtHash(accessToken, claims)) {
-                console.warn("Wrong at_hash");
-                return false;
-            }
+        if (this.issuer && claims.iss !== this.issuer) {
+            console.warn('Wrong issuer: ' + claims.iss);
+            return false;
+        }
 
-            if (code && !this.checkCHash(code, claims)) {
-                console.warn("Wrong c_hash");
-                return false;
-            }
+        if (claims.nonce !== savedNonce) {
+            console.warn('Wrong nonce: ' + claims.nonce);
+            return false;
+        }
 
-            // Das Prüfen des Zertifikates wird der Serverseite überlassen!
+        if (accessToken && !this.checkAtHash(accessToken, claims)) {
+            console.warn('Wrong at_hash');
+            return false;
+        }
 
-            var now = Date.now();
-            var issuedAtMSec = claims.iat * 1000;
-            var expiresAtMSec = claims.exp * 1000;
+        if (code && !this.checkCHash(code, claims)) {
+            console.warn('Wrong c_hash');
+            return false;
+        }
 
-            var tenMinutesInMsec = 1000 * 60 * 10;
+        // Das Prüfen des Zertifikates wird der Serverseite überlassen!
 
-            if (issuedAtMSec - tenMinutesInMsec >= now  || expiresAtMSec + tenMinutesInMsec <= now) {
-                console.warn("Token has been expired");
-                console.warn({
-                    now: now,
-                    issuedAtMSec: issuedAtMSec,
-                    expiresAtMSec: expiresAtMSec
-                });
-                return false;
-            }
+        const now = Date.now();
+        const issuedAtMSec = claims.iat * 1000;
+        const expiresAtMSec = claims.exp * 1000;
 
-            this._storage.setItem("id_token", idToken);
-            this._storage.setItem("id_token_claims_obj", claimsJson);
-            this._storage.setItem("id_token_expires_at", "" + expiresAtMSec);
+        const tenMinutesInMsec = 1000 * 60 * 10;
 
-            if (this.validationHandler) {
-                this.validationHandler(idToken)
-            }
+        if (issuedAtMSec - tenMinutesInMsec >= now || expiresAtMSec + tenMinutesInMsec <= now) {
+            console.warn('Token has been expired');
+            console.warn({
+                now: now,
+                issuedAtMSec: issuedAtMSec,
+                expiresAtMSec: expiresAtMSec
+            });
+            return false;
+        }
 
-            return true;
+        this._storage.setItem('id_token', idToken);
+        this._storage.setItem('id_token_claims_obj', claimsJson);
+        this._storage.setItem('id_token_expires_at', '' + expiresAtMSec);
+
+        if (this.validationHandler) {
+            this.validationHandler(idToken);
+        }
+
+        return true;
     }
 
     getIdentityClaims() {
-        var claims = this._storage.getItem("id_token_claims_obj");
-        if (!claims) return null;
+        const claims = this._storage.getItem('id_token_claims_obj');
+        if (!claims) {
+            return null;
+        }
         return JSON.parse(claims);
     }
 
     getIdToken() {
-        return this._storage.getItem("id_token");
+        return this._storage.getItem('id_token');
     }
 
     padBase64(base64data) {
         while (base64data.length % 4 !== 0) {
-            base64data += "=";
+            base64data += '=';
         }
         return base64data;
     }
 
     tryLoginWithIFrame() {
-        throw new Error("tryLoginWithIFrame has not been implemented so far");
+        throw new Error('tryLoginWithIFrame has not been implemented so far');
     };
 
     tryRefresh(timeoutInMsec) {
-        throw new Error("tryRefresh has not been implemented so far");
+        throw new Error('tryRefresh has not been implemented so far');
     };
 
     getAccessToken() {
-        return this._storage.getItem("access_token");
+        return this._storage.getItem('access_token');
     };
 
     hasValidAccessToken() {
         if (this.getAccessToken()) {
 
-            var expiresAt = this._storage.getItem("expires_at");
-            var now = new Date();
-            if (expiresAt && parseInt(expiresAt) < now.getTime()) {
+            const expiresAt = this._storage.getItem('expires_at');
+            const now = new Date();
+            if (expiresAt && parseInt(expiresAt, 10) < now.getTime()) {
                 return false;
             }
 
@@ -493,9 +500,9 @@ export class OAuthService {
     hasValidIdToken() {
         if (this.getIdToken()) {
 
-            var expiresAt = this._storage.getItem("id_token_expires_at");
-            var now = new Date();
-            if (expiresAt && parseInt(expiresAt) < now.getTime()) {
+            const expiresAt = this._storage.getItem('id_token_expires_at');
+            const now = new Date();
+            if (expiresAt && parseInt(expiresAt, 10) < now.getTime()) {
                 return false;
             }
 
@@ -506,44 +513,45 @@ export class OAuthService {
     };
 
     authorizationHeader() {
-        return "Bearer " + this.getAccessToken();
+        return 'Bearer ' + this.getAccessToken();
     }
 
-    logOut(noRedirectToLogoutUrl: boolean = false) {
-        var id_token = this.getIdToken();
-        this._storage.removeItem("access_token");
-        this._storage.removeItem("id_token");
-        this._storage.removeItem("refresh_token");
-        this._storage.removeItem("nonce");
-        this._storage.removeItem("expires_at");
-        this._storage.removeItem("id_token_claims_obj");
-        this._storage.removeItem("id_token_expires_at");
+    logOut(noRedirectToLogoutUrl = false) {
+        const id_token = this.getIdToken();
+        this._storage.removeItem('access_token');
+        this._storage.removeItem('id_token');
+        this._storage.removeItem('refresh_token');
+        this._storage.removeItem('nonce');
+        this._storage.removeItem('expires_at');
+        this._storage.removeItem('id_token_claims_obj');
+        this._storage.removeItem('id_token_expires_at');
 
-        if (!this.logoutUrl) return;
-        if (noRedirectToLogoutUrl) return;
+        if (!this.logoutUrl) {
+            return;
+        }
+        if (noRedirectToLogoutUrl) {
+            return;
+        }
 
         let logoutUrl: string;
 
         // For backward compatibility
         if (this.logoutUrl.indexOf('{{') > -1) {
             logoutUrl = this.logoutUrl.replace(/\{\{id_token\}\}/, id_token);
-        }
-        else {
-            logoutUrl = this.logoutUrl + "?id_token_hint="
-                                + encodeURIComponent(id_token)
-                                + "&post_logout_redirect_uri="
-                                + encodeURIComponent(this.redirectUri);
+        } else {
+            logoutUrl = this.logoutUrl + '?id_token_hint='
+                + encodeURIComponent(id_token)
+                + '&post_logout_redirect_uri='
+                + encodeURIComponent(this.redirectUri);
         }
         location.href = logoutUrl;
     };
 
     createAndSaveNonce() {
-        var that = this;
-        return this.createNonce().then(function (nonce: any) {
-            that._storage.setItem("nonce", nonce);
+        return this.createNonce().then((nonce: any) => {
+            this._storage.setItem('nonce', nonce);
             return nonce;
-        })
-
+        });
     };
 
     createNonce() {
@@ -551,14 +559,14 @@ export class OAuthService {
         return new Promise((resolve, reject) => {
 
             if (this.rngUrl) {
-                throw new Error("createNonce with rng-web-api has not been implemented so far");
-            }
-            else {
-                var text = "";
-                var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+                throw new Error('createNonce with rng-web-api has not been implemented so far');
+            } else {
+                let text = '';
+                const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
-                for (var i = 0; i < 40; i++)
+                for (let i = 0; i < 64; i++) {
                     text += possible.charAt(Math.floor(Math.random() * possible.length));
+                }
 
                 resolve(text);
             }
@@ -567,7 +575,7 @@ export class OAuthService {
     };
 
     getFragment() {
-        if (window.location.hash.indexOf("#") === 0) {
+        if (window.location.hash.indexOf('#') === 0) {
             return this.parseQueryString(window.location.hash.substr(1));
         } else {
             return {};
@@ -575,17 +583,17 @@ export class OAuthService {
     };
 
     parseQueryString(queryString) {
-        var data = {}, pairs, pair, separatorIndex, escapedKey, escapedValue, key, value;
+        let data = {}, pairs, pair, separatorIndex, escapedKey, escapedValue, key, value;
 
         if (queryString === null) {
             return data;
         }
 
-        pairs = queryString.split("&");
+        pairs = queryString.split('&');
 
-        for (var i = 0; i < pairs.length; i++) {
+        for (let i = 0; i < pairs.length; i++) {
             pair = pairs[i];
-            separatorIndex = pair.indexOf("=");
+            separatorIndex = pair.indexOf('=');
 
             if (separatorIndex === -1) {
                 escapedKey = pair;
@@ -598,8 +606,9 @@ export class OAuthService {
             key = decodeURIComponent(escapedKey);
             value = decodeURIComponent(escapedValue);
 
-            if (key.substr(0, 1) === '/')
+            if (key.substr(0, 1) === '/') {
                 key = key.substr(1);
+            }
 
             data[key] = value;
         }
@@ -607,44 +616,42 @@ export class OAuthService {
         return data;
     };
 
-
-
     checkAtHash(accessToken, idClaims) {
-        if (!accessToken || !idClaims || !idClaims.at_hash ) return true;
-        var tokenHash: Array<any> = sha256(accessToken, { asBytes: true });
-        var leftMostHalf = tokenHash.slice(0, (tokenHash.length/2) );
-        var tokenHashBase64 = fromByteArray(leftMostHalf);
-        var atHash = tokenHashBase64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-        var claimsAtHash = idClaims.at_hash.replace(/=/g, "");
+        if (!accessToken || !idClaims || !idClaims.at_hash) {
+            return true;
+        }
+        const tokenHash: Array<any> = sha256(accessToken, { asBytes: true });
+        const leftMostHalf = tokenHash.slice(0, (tokenHash.length / 2));
+        const tokenHashBase64 = fromByteArray(leftMostHalf);
+        const atHash = tokenHashBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        const claimsAtHash = idClaims.at_hash.replace(/=/g, '');
 
-        var atHash = tokenHashBase64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-
-        if (atHash != claimsAtHash) {
-            console.warn("exptected at_hash: " + atHash);
-            console.warn("actual at_hash: " + claimsAtHash);
+        if (atHash !== claimsAtHash) {
+            console.warn('exptected at_hash: ' + atHash);
+            console.warn('actual at_hash: ' + claimsAtHash);
         }
 
 
-        return (atHash == claimsAtHash);
+        return (atHash === claimsAtHash);
     }
 
     checkCHash(code, idClaims) {
-        if (!code || !idClaims || !idClaims.c_hash) return true;
-        var codeHash: Array<any> = sha256(code, { asBytes: true });
-        var leftMostHalf = codeHash.slice(0, (codeHash.length / 2));
-        var codeHashBase64 = fromByteArray(leftMostHalf);
-        var cHash = codeHashBase64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-        var claimsCHash = idClaims.c_hash.replace(/=/g, "");
+        if (!code || !idClaims || !idClaims.c_hash) {
+            return true;
+        }
+        const codeHash: Array<any> = sha256(code, { asBytes: true });
+        const leftMostHalf = codeHash.slice(0, (codeHash.length / 2));
+        const codeHashBase64 = fromByteArray(leftMostHalf);
+        const cHash = codeHashBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        const claimsCHash = idClaims.c_hash.replace(/=/g, '');
 
-        var cHash = codeHashBase64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-
-        if (cHash != claimsCHash) {
-            console.warn("exptected c_hash: " + cHash);
-            console.warn("actual c_hash: " + claimsCHash);
+        if (cHash !== claimsCHash) {
+            console.warn('exptected c_hash: ' + cHash);
+            console.warn('actual c_hash: ' + claimsCHash);
         }
 
 
-        return (cHash == claimsCHash);
+        return (cHash === claimsCHash);
     };
 
 }
