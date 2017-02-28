@@ -296,7 +296,7 @@ export class OAuthService {
         }
     }
 
-    tryLogin(options) {
+    tryLogin(options?) {
 
         options = options || {};
 
